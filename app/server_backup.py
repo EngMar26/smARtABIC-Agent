@@ -34,11 +34,9 @@ STICKER_DIR = os.path.join(DATA_DIR, "stickers")
 MODEL_NAME = "intfloat/multilingual-e5-small"
 TOP_K = 5
 SEARCH_K = 80
-DONT_KNOW_THRESHOLD = 0.85
-
 
 # عتبة "لا أعلم" (إذا الثقة منخفضة)
-
+DONT_KNOW_THRESHOLD = 0.72
 
 
 # =========================
@@ -90,15 +88,6 @@ def build_answer(question: str, retrieved: List[str], scores: List[float]) -> Tu
     if best_score < DONT_KNOW_THRESHOLD:
         return ("لا أعلم، ليس لدي معلومات كافية عن هذا السؤال حاليًا، "
                 "لكنني في مرحلة التطوير."), best_score
-   
-        # ===== Refusal Gate إضافي: Keyword overlap =====
-    kws = _keywords_ar(question)
-    kw_hits = sum(1 for w in kws if w in retrieved[0])
-
-    # إذا السؤال فيه كلمات مفتاحية كافية لكن المقطع لا يحتوي أي منها → نرفض
-    if len(kws) >= 2 and kw_hits == 0:
-        return ("لا أعلم، ليس لدي معلومات كافية عن هذا السؤال حاليًا، "
-                "لكنني في مرحلة التطوير."), best_score
 
     text = retrieved[0].strip()
 
@@ -148,20 +137,13 @@ def ask(req: AskRequest):
     retrieved, scores = retrieve_chunks(question)
     answer, best_score = build_answer(question, retrieved, scores)
 
-    show_chunks = retrieved
-    show_scores = scores
-    if answer.startswith("لا أعلم"):
-        show_chunks = []
-        show_scores = []
-
     return JSONResponse({
         "question": question,
         "answer": answer,
         "best_score": float(best_score),
-        "chunks": show_chunks,
-        "scores": show_scores
+        "chunks": retrieved,
+        "scores": scores
     })
-
 
 
 # =========================
